@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Pembuat Kode Voucher</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Menggunakan font Inter dari Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Warna latar belakang abu-abu terang */
+        }
+        /* Custom scrollbar for the textarea */
+        textarea::-webkit-scrollbar {
+            width: 8px;
+        }
+        textarea::-webkit-scrollbar-track {
+            background: #e0e0e0;
+            border-radius: 10px;
+        }
+        textarea::-webkit-scrollbar-thumb {
+            background: #9ca3af;
+            border-radius: 10px;
+        }
+        textarea::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl border border-gray-200">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Pembuat Kode Voucher</h1>
+
+        <!-- Input for number of vouchers -->
+        <div class="mb-5">
+            <label for="numVouchers" class="block text-gray-700 text-sm font-semibold mb-2">Jumlah Kode Voucher yang Ingin Dibuat (maksimal 100.000):</label>
+            <input type="number" id="numVouchers" min="1" max="100000" value="100"
+                   class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out">
+            <p class="text-xs text-gray-500 mt-1">Masukkan angka antara 1 dan 100.000.</p>
+        </div>
+
+        <!-- Length of voucher code -->
+        <div class="mb-5">
+            <label for="voucherLength" class="block text-gray-700 text-sm font-semibold mb-2">Panjang Kode Voucher (6-20 karakter):</label>
+            <input type="number" id="voucherLength" min="6" max="20" value="12"
+                   class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out">
+            <p class="text-xs text-gray-500 mt-1">Masukkan angka antara 6 dan 20.</p>
+        </div>
+
+        <!-- Generate Button -->
+        <button id="generateBtn"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg w-full mb-6
+                       transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75
+                       shadow-md hover:shadow-lg">
+            Hasilkan Kode Voucher
+        </button>
+
+        <!-- Loading Spinner -->
+        <div id="loadingSpinner" class="hidden flex justify-center items-center mb-6">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <span class="ml-3 text-gray-600">Menghasilkan kode...</span>
+        </div>
+
+        <!-- Voucher Codes Display Area -->
+        <div class="mb-5">
+            <label for="voucherCodes" class="block text-gray-700 text-sm font-semibold mb-2">Kode Voucher yang Dihasilkan:</label>
+            <textarea id="voucherCodes" rows="10" readonly
+                      class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-800 bg-gray-50
+                             leading-tight focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-transparent
+                             resize-none text-sm"></textarea>
+        </div>
+
+        <!-- Copy Button -->
+        <button id="copyBtn"
+                class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg w-full
+                       transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75
+                       shadow-md hover:shadow-lg">
+            Salin Semua Kode
+        </button>
+
+        <!-- Message Box -->
+        <div id="messageBox" class="hidden bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative mt-6" role="alert">
+            <p id="messageText"></p>
+        </div>
+    </div>
+
+    <script>
+        const generateBtn = document.getElementById('generateBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const numVouchersInput = document.getElementById('numVouchers');
+        const voucherLengthInput = document.getElementById('voucherLength');
+        const voucherCodesTextarea = document.getElementById('voucherCodes');
+        const messageBox = document.getElementById('messageBox');
+        const messageText = document.getElementById('messageText');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+
+        /**
+         * Menampilkan pesan sementara di kotak pesan.
+         * @param {string} message - Pesan yang akan ditampilkan.
+         * @param {string} type - Jenis pesan ('success', 'info', 'error').
+         */
+        function showMessage(message, type = 'info') {
+            messageText.textContent = message;
+            messageBox.className = px-4 py-3 rounded relative mt-6 transition-all duration-300 ease-in-out ${type === 'success' ? 'bg-green-100 border-green-400 text-green-700' : type === 'error' ? 'bg-red-100 border-red-400 text-red-700' : 'bg-blue-100 border-blue-400 text-blue-700'};
+            messageBox.classList.remove('hidden');
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, 3000); // Pesan akan hilang setelah 3 detik
+        }
+
+        /**
+         * Menghasilkan satu kode voucher acak dengan panjang tertentu.
+         * @param {number} length - Panjang kode voucher.
+         * @returns {string} Kode voucher yang dihasilkan.
+         */
+        function generateSingleVoucherCode(length) {
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            const charactersLength = characters.length;
+            for (let i = 0; i < length; i++) {
+                result += characters.charAt(Math.floor(Math.random() * charactersLength));
+            }
+            return result;
+        }
+
+        /**
+         * Mengatur status UI selama proses generasi.
+         * @param {boolean} isLoading - True jika proses sedang berjalan, false jika tidak.
+         */
+        function setUILoading(isLoading) {
+            generateBtn.disabled = isLoading;
+            copyBtn.disabled = isLoading;
+            numVouchersInput.disabled = isLoading;
+            voucherLengthInput.disabled = isLoading;
+            if (isLoading) {
+                loadingSpinner.classList.remove('hidden');
+                generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                loadingSpinner.classList.add('hidden');
+                generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        // Event listener untuk tombol "Hasilkan Kode Voucher"
+        generateBtn.addEventListener('click', async () => {
+            const numVouchers = parseInt(numVouchersInput.value);
+            const voucherLength = parseInt(voucherLengthInput.value);
+
+            // Validasi input jumlah voucher
+            if (isNaN(numVouchers) || numVouchers < 1 || numVouchers > 100000) {
+                showMessage('Jumlah kode voucher harus antara 1 dan 100.000.', 'error');
+                return;
+            }
+
+            // Validasi input panjang voucher
+            if (isNaN(voucherLength) || voucherLength < 6 || voucherLength > 20) {
+                showMessage('Panjang kode voucher harus antara 6 dan 20 karakter.', 'error');
+                return;
+            }
+
+            setUILoading(true);
+            voucherCodesTextarea.value = ''; // Kosongkan area tampilan
+            const generatedCodes = new Set(); // Menggunakan Set untuk memastikan keunikan
+
+            // Menggunakan setTimeout untuk memecah tugas dan menghindari pemblokiran UI
+            const generateBatch = (count) => {
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        for (let i = 0; i < count; i++) {
+                            let code;
+                            do {
+                                code = generateSingleVoucherCode(voucherLength);
+                            } while (generatedCodes.has(code)); // Pastikan kode unik
+                            generatedCodes.add(code);
+                        }
+                        resolve();
+                    }, 0); // Memberikan jeda agar UI tidak macet
+                });
+            };
+
+            const batchSize = 10000; // Ukuran batch untuk performa yang lebih baik
+            let generatedCount = 0;
+
+            while (generatedCount < numVouchers) {
+                const remaining = numVouchers - generatedCount;
+                const currentBatchSize = Math.min(batchSize, remaining);
+                await generateBatch(currentBatchSize);
+                generatedCount += currentBatchSize;
+                // Optional: Update loading message or progress bar here
+            }
+
+            voucherCodesTextarea.value = Array.from(generatedCodes).join('\n');
+            showMessage(${numVouchers} kode voucher berhasil dihasilkan!, 'success');
+            setUILoading(false);
+        });
+
+        // Event listener untuk tombol "Salin Semua Kode"
+        copyBtn.addEventListener('click', () => {
+            if (voucherCodesTextarea.value) {
+                voucherCodesTextarea.select();
+                document.execCommand('copy'); // Menggunakan execCommand untuk kompatibilitas iframe
+                showMessage('Kode voucher berhasil disalin ke clipboard!', 'success');
+            } else {
+                showMessage('Tidak ada kode voucher untuk disalin.', 'info');
+            }
+        });
+    </script>
+</body>
+</html>
